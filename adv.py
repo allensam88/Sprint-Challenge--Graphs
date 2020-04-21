@@ -4,7 +4,8 @@ from world import World
 
 import random
 from ast import literal_eval
-from util import Stack
+from traversal_graph import TraversalGraph
+
 # Load world
 world = World()
 
@@ -33,60 +34,111 @@ player = Player(world.starting_room)
 #                   'w', 'w', 'n', 'n', 's', 'e', 'e', 'n', 's', 'w', 'w', 'w', 'w', 'n']
 traversal_path = []
 
-# Allows the user to backtrack and retrace traversal path in opposite direction
-reversal_path = [None]
+# -----REFACTOR-----
+explored = TraversalGraph()
+
+reversal_stack = []
 reverse = {'n': 's', 's': 'n', 'w': 'e', 'e': 'w'}
 
-# Log will keep track of rooms with unexplored exits
-log = {}
-# Initialize the starting room
-log[player.current_room.id] = player.current_room.get_exits()
+# initialize starting room
+explored.add_room(player.current_room.id, player.current_room.get_exits())
 
-while len(log) < len(room_graph):
+# run until the number of visited rooms equals the number of rooms in the maze
+while len(explored.rooms) < len(room_graph):
+    # assign initial variables
     current_room = player.current_room.id
     exits = player.current_room.get_exits()
-    reverse_direction = reversal_path[-1]
 
-    print('-----------------------------------------------------------------------------------------')
-    print('Log: ', log)
-    print('Current Room: ', current_room)
-    print('Unexplored Exits: ', exits)
+    # sift thru exits and find an unexplored direction (?)
+    direction = explored.explore_direction(current_room, exits)
 
-    # if player hasn't visited the room yet...
-    if current_room not in log:
-        # add the room and its exits
-        log[current_room] = exits
-        # if the player already explored that direction...
-        if reverse_direction:
-            print(f'Already explored: {reverse_direction}')
-            # then remove that exit option
-            exits.remove(reverse_direction)
-
-    # if player has already visited a room, but it has unexplored exits in the log...
-    elif len(log[current_room]) > 0:
-        # move in another unexplored direction
-        direction = log[current_room].pop()
+    # if unexplored directions (?)
+    if direction:
+        # save the current_room as the previous room, then travel to the next room
+        prev_room = current_room
         player.travel(direction)
-        # update traversal and reversal paths
+
+        # update the traversal path & reversal stack
         traversal_path.append(direction)
-        reversal_path.append(reverse[direction])
+        reversal_stack.append(reverse[direction])
 
-        print('Travel Direction: ', direction)
-        print('Traversal Path: ', traversal_path)
-        print('Reversal Path: ', reversal_path)
-        print('New Room: ', player.current_room.id)
+        # assign the new room
+        new_room = player.current_room.id
 
-    # if a player has visited a room and all exits have been explored in the log...
-    elif len(log[current_room]) == 0:
-        # retrace the path in reverse
-        direction = reversal_path.pop()
-        player.travel(direction)
-        traversal_path.append(direction)
+        # add the new room if player has not been there before
+        if new_room not in explored.rooms:
+            # get the new room's exits first
+            new_exits = player.current_room.get_exits()
+            explored.add_room(new_room, new_exits)
 
-        print('Travel Reverse Direction: ', direction)
-        print('Traversal Path: ', traversal_path)
-        print('Reversal Path: ', reversal_path)
-        print('New Room: ', player.current_room.id)
+        # connect the new room to the previous room
+        explored.add_connection(new_room, prev_room,
+                                direction, reverse[direction])
+
+    # else reached a dead end or all exit directions have been explored
+    else:
+        reversal = reversal_stack.pop()
+        player.travel(reversal)
+        traversal_path.append(reversal)
+
+# print('Longest Path: ', explored.longest_dft(0))
+
+# --------------------BREAK--------------------
+# Older solution
+# Allows the user to backtrack and retrace traversal path in opposite direction
+# reversal_path = [None]
+# reverse = {'n': 's', 's': 'n', 'w': 'e', 'e': 'w'}
+
+# # Log will keep track of rooms with unexplored exits
+# log = {}
+# # Initialize the starting room
+# log[player.current_room.id] = player.current_room.get_exits()
+
+# while len(log) < len(room_graph):
+#     current_room = player.current_room.id
+#     exits = player.current_room.get_exits()
+#     reverse_direction = reversal_path[-1]
+
+#     print('-----------------------------------------------------------------------------------------')
+#     print('Log: ', log)
+#     print('Current Room: ', current_room)
+#     print('Unexplored Exits: ', exits)
+
+#     # if player hasn't visited the room yet...
+#     if current_room not in log:
+#         # add the room and its exits
+#         log[current_room] = exits
+#         # if the player already explored that direction...
+#         if reverse_direction:
+#             print(f'Already explored: {reverse_direction}')
+#             # then remove that exit option
+#             exits.remove(reverse_direction)
+
+#     # if player has already visited a room, but it has unexplored exits in the log...
+#     elif len(log[current_room]) > 0:
+#         # move in another unexplored direction
+#         direction = log[current_room].pop()
+#         player.travel(direction)
+#         # update traversal and reversal paths
+#         traversal_path.append(direction)
+#         reversal_path.append(reverse[direction])
+
+#         print('Travel Direction: ', direction)
+#         print('Traversal Path: ', traversal_path)
+#         print('Reversal Path: ', reversal_path)
+#         print('New Room: ', player.current_room.id)
+
+#     # if a player has visited a room and all exits have been explored in the log...
+#     elif len(log[current_room]) == 0:
+#         # retrace the path in reverse
+#         direction = reversal_path.pop()
+#         player.travel(direction)
+#         traversal_path.append(direction)
+
+#         print('Travel Reverse Direction: ', direction)
+#         print('Traversal Path: ', traversal_path)
+#         print('Reversal Path: ', reversal_path)
+#         print('New Room: ', player.current_room.id)
 
 
 # --- OLD APPROACH ---
